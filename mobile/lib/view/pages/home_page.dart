@@ -3,11 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../viewmodel/upload_viewmodel.dart';
+import 'processing_page.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
 
-  Future<void> pickAndUpload(BuildContext context) async {
+  Future<void> pickFile(BuildContext context) async {
     final vm = Provider.of<UploadViewModel>(context, listen: false);
 
     FilePickerResult? result = await FilePicker.platform.pickFiles(
@@ -20,8 +21,7 @@ class HomePage extends StatelessWidget {
       String filename = result.files.single.name;
 
       vm.setSelectedFile(filename);
-
-      await vm.uploadFile(path);
+      vm.setSelectedFilePath(path);
     }
   }
 
@@ -38,9 +38,11 @@ class HomePage extends StatelessWidget {
 
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
+
             children: [
               ElevatedButton(
-                onPressed: () => pickAndUpload(context),
+                onPressed: () => pickFile(context),
+
                 child: const Text("Upload Audio / Video"),
               ),
 
@@ -50,38 +52,22 @@ class HomePage extends StatelessWidget {
 
               const SizedBox(height: 20),
 
-              if (vm.isLoading) const CircularProgressIndicator(),
+              if (vm.selectedFile != "Tidak ada file dipilih")
+                SizedBox(
+                  width: 220,
 
-              const SizedBox(height: 20),
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const ProcessingPage(),
+                        ),
+                      );
+                    },
 
-              Text(vm.status, textAlign: TextAlign.center),
-
-              const SizedBox(height: 20),
-
-              if (vm.enhancedFile != null)
-                ElevatedButton(
-                  onPressed: () async {
-                    await vm.playEnhancedAudio();
-                  },
-                  child: const Text("▶ Play Enhanced Audio"),
-                ),
-
-              const SizedBox(height: 10),
-
-              if (vm.isPlaying)
-                ElevatedButton(
-                  onPressed: () async {
-                    await vm.stopAudio();
-                  },
-                  child: const Text("⏹ Stop Audio"),
-                ),
-
-              if (vm.enhancedFile != null)
-                ElevatedButton(
-                  onPressed: () async {
-                    await vm.downloadEnhancedFile();
-                  },
-                  child: const Text("Download Enhanced Audio"),
+                    child: const Text("Continue"),
+                  ),
                 ),
             ],
           ),

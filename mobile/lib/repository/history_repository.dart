@@ -20,4 +20,23 @@ class HistoryRepository {
 
     return List.generate(maps.length, (i) => HistoryModel.fromMap(maps[i]));
   }
+
+  Future<void> deleteHistory(int id) async {
+    final db = await DatabaseHelper.database;
+
+    await db.delete('history', where: 'id = ?', whereArgs: [id]);
+  }
+
+  Future<List<HistoryModel>> searchHistory(String keyword) async {
+    final db = await DatabaseHelper.database;
+
+    final maps = await db.query(
+      'history',
+      where: 'originalFile LIKE ?',
+      whereArgs: ['%$keyword%'],
+      orderBy: 'id DESC',
+    );
+
+    return maps.map((e) => HistoryModel.fromMap(e)).toList();
+  }
 }

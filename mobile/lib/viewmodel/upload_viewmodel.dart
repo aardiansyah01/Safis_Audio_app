@@ -18,21 +18,62 @@ class UploadViewModel extends ChangeNotifier {
 
   String status = "Belum upload";
   String selectedFile = "Tidak ada file dipilih";
+  String? selectedFilePath;
 
   String? enhancedFile;
 
   bool isLoading = false;
   bool isPlaying = false;
+  bool isUploadSuccess = false;
+
+  // AI SETTINGS
+
+  double noiseReduction = 50;
+  double audioEnhancement = 50;
 
   List<HistoryModel> histories = [];
 
-  Future<void> uploadFile(String path) async {
+  void setSelectedFile(String filename) {
+    selectedFile = filename;
+    notifyListeners();
+  }
+
+  void setSelectedFilePath(String path) {
+    selectedFilePath = path;
+    notifyListeners();
+  }
+
+  void setNoiseReduction(double value) {
+    noiseReduction = value;
+    notifyListeners();
+  }
+
+  void setAudioEnhancement(double value) {
+    audioEnhancement = value;
+    notifyListeners();
+  }
+
+  void resetProcessingState() {
+    enhancedFile = null;
+    isLoading = false;
+    isPlaying = false;
+    isUploadSuccess = false;
+    status = "Belum upload";
+    notifyListeners();
+  }
+
+  Future<bool> uploadFile(String path) async {
     try {
       isLoading = true;
+      isUploadSuccess = false;
       status = "Uploading...";
       notifyListeners();
 
-      String result = await repository.upload(path);
+      final String result = await repository.upload(
+        path,
+        noiseReduction,
+        audioEnhancement,
+      );
 
       enhancedFile = result;
 
@@ -44,13 +85,19 @@ class UploadViewModel extends ChangeNotifier {
         ),
       );
 
+      await loadHistory();
+
       status = "Upload berhasil: $result";
+      isUploadSuccess = true;
+      return true;
     } catch (e) {
       status = "Error upload: $e";
+      isUploadSuccess = false;
+      return false;
+    } finally {
+      isLoading = false;
+      notifyListeners();
     }
-
-    isLoading = false;
-    notifyListeners();
   }
 
   Future<void> downloadEnhancedFile() async {
@@ -64,14 +111,9 @@ class UploadViewModel extends ChangeNotifier {
 
       status = "Download selesai";
     } catch (e) {
-      status = "Download gagal";
+      status = "Download gagal: $e";
     }
 
-    notifyListeners();
-  }
-
-  void setSelectedFile(String filename) {
-    selectedFile = filename;
     notifyListeners();
   }
 
@@ -84,26 +126,21 @@ class UploadViewModel extends ChangeNotifier {
       );
 
       isPlaying = true;
-
       notifyListeners();
     } catch (e) {
       status = "Gagal memutar audio";
-
       notifyListeners();
     }
   }
 
   Future<void> stopAudio() async {
     await audioRepository.stop();
-
     isPlaying = false;
-
     notifyListeners();
   }
 
   Future<void> loadHistory() async {
     histories = await historyRepository.getHistory();
-
     notifyListeners();
   }
 }

@@ -1,4 +1,4 @@
-from fastapi import FastAPI, UploadFile, File
+from fastapi import FastAPI, UploadFile, File, Form
 from fastapi.responses import FileResponse
 import shutil
 import os
@@ -12,20 +12,32 @@ def home():
     return {"message": "Backend Running"}
 
 @app.post("/upload")
-async def upload_file(file: UploadFile = File(...)):
+async def upload_file(
+    file: UploadFile = File(...),
+    noise_reduction: int = Form(50),
+    audio_enhancement: int = Form(50)
+):
 
-    # Save original file
     upload_path = f"app/uploads/{file.filename}"
 
     with open(upload_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
 
-    # Output filename
-    output_filename = f"enhanced_{file.filename}"
+    file_ext = os.path.splitext(file.filename)[1]
+
+    output_filename = (
+        f"enhanced_{os.path.splitext(file.filename)[0]}"
+        f"{file_ext}"
+    )
+
     output_path = f"app/outputs/{output_filename}"
 
-    # Process AI enhancement
-    enhance_audio(upload_path, output_path)
+    enhance_audio(
+        upload_path,
+        output_path,
+        noise_reduction,
+        audio_enhancement
+    )
 
     return {
         "message": "Audio enhanced successfully",
