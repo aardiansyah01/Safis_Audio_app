@@ -2,259 +2,162 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../viewmodel/upload_viewmodel.dart';
+import '../widgets/result/result_action_button.dart';
+import '../widgets/result/result_audio_preview_card.dart';
+import '../widgets/result/result_info_card.dart';
+import '../widgets/result/result_success_banner.dart';
+import '../widgets/result/result_video_preview_card.dart';
 
-class ResultPage extends StatelessWidget {
+class ResultPage extends StatefulWidget {
   const ResultPage({super.key});
 
   @override
+  State<ResultPage> createState() => _ResultPageState();
+}
+
+class _ResultPageState extends State<ResultPage> {
+  @override
+  void initState() {
+    super.initState();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      context.read<UploadViewModel>().initializeResultPreview();
+    });
+  }
+
+  @override
+  void dispose() {
+    // jangan pakai context.watch di dispose
+    final vm = context.read<UploadViewModel>();
+    vm.disposeResultPreview(notify: false);
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final vm = Provider.of<UploadViewModel>(context);
+    final vm = context.watch<UploadViewModel>();
 
     return Scaffold(
+      backgroundColor: const Color(0xFFF7F8FA),
       appBar: AppBar(
-        title: const Text("Processing Complete"),
         automaticallyImplyLeading: false,
-      ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(
-                  vertical: 14,
-                  horizontal: 16,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.green.shade100,
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: const Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.check_circle, color: Colors.green),
-                    SizedBox(width: 10),
-                    Text(
-                      "AI Enhancement Complete",
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.green,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 24),
-
-              // ENHANCED RESULT
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(18),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      "Enhanced Result",
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-
-                    Text(
-                      "Original File: ${vm.selectedFile}",
-                      style: const TextStyle(fontSize: 14),
-                    ),
-                    const SizedBox(height: 8),
-
-                    Text(
-                      "Enhanced File: ${vm.enhancedFile ?? '-'}",
-                      style: const TextStyle(fontSize: 14),
-                    ),
-                    const SizedBox(height: 8),
-
-                    Text(
-                      "Noise Reduction: ${vm.noiseReduction.toInt()}%",
-                      style: const TextStyle(fontSize: 14),
-                    ),
-                    const SizedBox(height: 8),
-
-                    Text(
-                      "Audio Enhancement: ${vm.audioEnhancement.toInt()}%",
-                      style: const TextStyle(fontSize: 14),
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 24),
-
-              // INFO CARDS
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildInfoCard(
-                      title: "Noise Reduction",
-                      value: "${vm.noiseReduction.toInt()}%",
-                      icon: Icons.graphic_eq,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _buildInfoCard(
-                      title: "Clarity Boost",
-                      value: "${vm.audioEnhancement.toInt()}%",
-                      icon: Icons.auto_fix_high,
-                    ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 12),
-
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildInfoCard(
-                      title: "Status",
-                      value: "Success",
-                      icon: Icons.check_circle_outline,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _buildInfoCard(
-                      title: "Output",
-                      value: vm.enhancedFile ?? "-",
-                      icon: Icons.audio_file,
-                    ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 24),
-
-              // PLAY
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: vm.enhancedFile == null
-                      ? null
-                      : () async {
-                          await vm.playEnhancedAudio();
-                        },
-                  icon: const Icon(Icons.play_arrow),
-                  label: const Text("Play Enhanced Audio"),
-                ),
-              ),
-
-              const SizedBox(height: 12),
-
-              // STOP BUTTON
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton.icon(
-                  onPressed: vm.isPlaying
-                      ? () async {
-                          await vm.stopAudio();
-                        }
-                      : null,
-                  icon: const Icon(Icons.stop),
-                  label: const Text("Stop Audio"),
-                ),
-              ),
-
-              const SizedBox(height: 12),
-
-              // DOWNLOAD
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: vm.enhancedFile == null
-                      ? null
-                      : () async {
-                          await vm.downloadEnhancedFile();
-
-                          if (context.mounted) {
-                            ScaffoldMessenger.of(
-                              context,
-                            ).showSnackBar(SnackBar(content: Text(vm.status)));
-                          }
-                        },
-                  icon: const Icon(Icons.download),
-                  label: const Text("Download Enhanced Audio"),
-                ),
-              ),
-
-              const SizedBox(height: 12),
-
-              // PROCESS AGAIN
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton(
-                  onPressed: () {
-                    Navigator.popUntil(context, (route) => route.isFirst);
-                  },
-                  child: const Text("Process Again"),
-                ),
-              ),
-
-              const SizedBox(height: 12),
-            ],
+        backgroundColor: const Color(0xFFF7F8FA),
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        title: const Text(
+          "Processing Complete",
+          style: TextStyle(
+            color: Color(0xFF111827),
+            fontSize: 22,
+            fontWeight: FontWeight.w700,
           ),
         ),
       ),
-    );
-  }
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const ResultSuccessBanner(),
+              const SizedBox(height: 18),
 
-  Widget _buildInfoCard({
-    required String title,
-    required String value,
-    required IconData icon,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      constraints: const BoxConstraints(minHeight: 140),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+              if (vm.enhancedFile != null) ...[
+                if (vm.isEnhancedFileVideo)
+                  const ResultVideoPreviewCard()
+                else if (vm.isEnhancedFileAudio && vm.enhancedFileUrl != null)
+                  ResultAudioPreviewCard(
+                    fileName: vm.enhancedFile!,
+                    audioUrl: vm.enhancedFileUrl!,
+                  ),
+
+                const SizedBox(height: 18),
+              ],
+
+              Row(
+                children: [
+                  Expanded(
+                    child: ResultInfoCard(
+                      icon: Icons.graphic_eq_rounded,
+                      iconColor: const Color(0xFF2563EB),
+                      value: "${vm.noiseReduction.toInt()}%",
+                      label: "Noise Reduction",
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ResultInfoCard(
+                      icon: Icons.auto_fix_high_rounded,
+                      iconColor: const Color(0xFF8B5CF6),
+                      value: "${vm.audioEnhancement.toInt()}%",
+                      label: "Clarity Boost",
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 12),
+
+              Row(
+                children: [
+                  Expanded(
+                    child: const ResultInfoCard(
+                      icon: Icons.check_circle_outline_rounded,
+                      iconColor: Color(0xFF10B981),
+                      value: "Success",
+                      label: "Status",
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ResultInfoCard(
+                      icon: Icons.insert_drive_file_rounded,
+                      iconColor: const Color(0xFFF59E0B),
+                      value: vm.enhancedFile ?? "-",
+                      label: "File Name",
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 22),
+
+              ResultActionButton(
+                onPressed: vm.enhancedFile == null
+                    ? null
+                    : () async {
+                        await vm.downloadEnhancedFile();
+
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(
+                            context,
+                          ).showSnackBar(SnackBar(content: Text(vm.status)));
+                        }
+                      },
+                icon: Icons.download_rounded,
+                label: vm.isEnhancedFileVideo
+                    ? "Download Enhanced Video"
+                    : "Download Enhanced Audio",
+                isPrimary: true,
+              ),
+
+              const SizedBox(height: 12),
+
+              ResultActionButton(
+                onPressed: () async {
+                  await vm.resetProcessingState();
+
+                  if (!context.mounted) return;
+                  Navigator.popUntil(context, (route) => route.isFirst);
+                },
+                icon: Icons.refresh_rounded,
+                label: "Process Again",
+                isPrimary: false,
+              ),
+            ],
           ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, size: 20),
-          const SizedBox(height: 12),
-          Text(
-            value,
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
-          const SizedBox(height: 6),
-          Text(title, style: const TextStyle(fontSize: 13, color: Colors.grey)),
-        ],
+        ),
       ),
     );
   }

@@ -2,67 +2,101 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../viewmodel/upload_viewmodel.dart';
+import '../widgets/processing/processing_audio_preview_card.dart';
+import '../widgets/processing/processing_process_button.dart';
+import '../widgets/processing/processing_slider_card.dart';
+import '../widgets/processing/processing_video_preview_card.dart';
 import 'loading_page.dart';
 
-class ProcessingPage extends StatelessWidget {
+class ProcessingPage extends StatefulWidget {
   const ProcessingPage({super.key});
+
+  @override
+  State<ProcessingPage> createState() => _ProcessingPageState();
+}
+
+class _ProcessingPageState extends State<ProcessingPage> {
+  @override
+  void initState() {
+    super.initState();
+
+    Future.microtask(() {
+      if (!mounted) return;
+      context.read<UploadViewModel>().initializeProcessingPreview();
+    });
+  }
+
+  @override
+  void dispose() {
+    final vm = context.read<UploadViewModel>();
+    vm.disposeProcessingPreview(notify: false);
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final vm = Provider.of<UploadViewModel>(context);
 
     return Scaffold(
-      appBar: AppBar(title: const Text("Audio Processing")),
-      body: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              vm.selectedFile,
-              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
+      backgroundColor: const Color(0xFFF7F8FA),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFFF7F8FA),
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        title: const Text(
+          "Audio Processing",
+          style: TextStyle(
+            color: Color(0xFF111827),
+            fontSize: 22,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        iconTheme: const IconThemeData(color: Color(0xFF111827)),
+      ),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (vm.selectedFilePath != null)
+                vm.isSelectedFileVideo
+                    ? const ProcessingVideoPreviewCard()
+                    : ProcessingAudioPreviewCard(
+                        filePath: vm.selectedFilePath!,
+                        fileName: vm.selectedFile,
+                      ),
 
-            const SizedBox(height: 30),
+              const SizedBox(height: 18),
 
-            Text(
-              "Noise Reduction : ${vm.noiseReduction.toInt()}%",
-              style: const TextStyle(fontSize: 16),
-            ),
+              ProcessingSliderCard(
+                icon: Icons.graphic_eq_rounded,
+                title: "Noise Reduction",
+                value: vm.noiseReduction,
+                valueColor: const Color(0xFF2563EB),
+                activeColor: const Color(0xFF2563EB),
+                leftLabel: "Subtle",
+                rightLabel: "Aggressive",
+                onChanged: vm.setNoiseReduction,
+              ),
 
-            Slider(
-              value: vm.noiseReduction,
-              min: 0,
-              max: 100,
-              divisions: 100,
-              onChanged: (value) {
-                vm.setNoiseReduction(value);
-              },
-            ),
+              const SizedBox(height: 16),
 
-            const SizedBox(height: 20),
+              ProcessingSliderCard(
+                icon: Icons.auto_fix_high_rounded,
+                title: "Audio Enhancement",
+                value: vm.audioEnhancement,
+                valueColor: const Color(0xFF7C3AED),
+                activeColor: const Color(0xFF8B5CF6),
+                leftLabel: "Natural",
+                rightLabel: "Studio",
+                onChanged: vm.setAudioEnhancement,
+              ),
 
-            Text(
-              "Audio Enhancement : ${vm.audioEnhancement.toInt()}%",
-              style: const TextStyle(fontSize: 16),
-            ),
+              const SizedBox(height: 28),
 
-            Slider(
-              value: vm.audioEnhancement,
-              min: 0,
-              max: 100,
-              divisions: 100,
-              onChanged: (value) {
-                vm.setAudioEnhancement(value);
-              },
-            ),
-
-            const Spacer(),
-
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () {
+              ProcessingProcessButton(
+                onPressed: () async {
                   if (vm.selectedFilePath == null) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(content: Text("File belum dipilih")),
@@ -70,15 +104,19 @@ class ProcessingPage extends StatelessWidget {
                     return;
                   }
 
+                  await vm.stopAudio();
+                  await vm.disposeProcessingPreview();
+
+                  if (!context.mounted) return;
+
                   Navigator.push(
                     context,
                     MaterialPageRoute(builder: (_) => const LoadingPage()),
                   );
                 },
-                child: const Text("Process Audio"),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

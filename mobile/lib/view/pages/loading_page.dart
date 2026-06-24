@@ -15,17 +15,18 @@ class _LoadingPageState extends State<LoadingPage> {
   bool _hasStarted = false;
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
+  void initState() {
+    super.initState();
 
-    if (!_hasStarted) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || _hasStarted) return;
       _hasStarted = true;
       _startProcessing();
-    }
+    });
   }
 
   Future<void> _startProcessing() async {
-    final vm = Provider.of<UploadViewModel>(context, listen: false);
+    final vm = context.read<UploadViewModel>();
 
     if (vm.selectedFilePath == null) {
       if (!mounted) return;
@@ -43,6 +44,9 @@ class _LoadingPageState extends State<LoadingPage> {
     if (!mounted) return;
 
     if (success) {
+      await Future.delayed(const Duration(milliseconds: 50));
+      if (!mounted) return;
+
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (_) => const ResultPage()),
@@ -58,7 +62,7 @@ class _LoadingPageState extends State<LoadingPage> {
 
   @override
   Widget build(BuildContext context) {
-    final vm = Provider.of<UploadViewModel>(context);
+    final vm = context.watch<UploadViewModel>();
 
     return Scaffold(
       body: SafeArea(
@@ -67,9 +71,7 @@ class _LoadingPageState extends State<LoadingPage> {
           child: Column(
             children: [
               const SizedBox(height: 30),
-
               const CircularProgressIndicator(),
-
               const SizedBox(height: 32),
 
               const Text(
@@ -91,21 +93,18 @@ class _LoadingPageState extends State<LoadingPage> {
                 title: "Analyzing audio...",
                 isDone: vm.status != "Uploading...",
               ),
-
               const SizedBox(height: 14),
 
               _buildStepItem(
                 title: "Removing noise...",
                 isDone: vm.status != "Uploading...",
               ),
-
               const SizedBox(height: 14),
 
               _buildStepItem(
                 title: "Enhancing clarity...",
                 isDone: vm.status != "Uploading...",
               ),
-
               const SizedBox(height: 14),
 
               _buildStepItem(
