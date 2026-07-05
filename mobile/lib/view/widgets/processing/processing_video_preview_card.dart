@@ -127,7 +127,7 @@ class ProcessingVideoPreviewCard extends StatelessWidget {
                           width: 64,
                           height: 64,
                           decoration: BoxDecoration(
-                            color: Colors.black.withOpacity(0.35),
+                            color: Colors.black.withValues(alpha: 0.35),
                             shape: BoxShape.circle,
                           ),
                           child: Icon(

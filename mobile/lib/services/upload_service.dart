@@ -1,5 +1,7 @@
 import 'package:dio/dio.dart';
 
+import '../model/upload_response_model.dart';
+
 class UploadService {
   final Dio dio = Dio(
     BaseOptions(
@@ -9,18 +11,15 @@ class UploadService {
     ),
   );
 
-  Future<String> uploadFile(
+  static const String baseUrl = "http://127.0.0.1:8000";
+
+  Future<UploadResponseModel> uploadFile(
     String filePath,
     double noiseReduction,
     double audioEnhancement,
   ) async {
     try {
-      print("START UPLOAD");
-      print("FILE PATH: $filePath");
-      print("NOISE: $noiseReduction");
-      print("ENHANCEMENT: $audioEnhancement");
-
-      String fileName = filePath.split('/').last;
+      final String fileName = filePath.split('/').last;
 
       FormData formData = FormData.fromMap({
         "file": await MultipartFile.fromFile(filePath, filename: fileName),
@@ -28,29 +27,44 @@ class UploadService {
         "audio_enhancement": audioEnhancement.toInt(),
       });
 
-      print("POSTING TO BACKEND...");
-
       final response = await dio.post(
-        "http://127.0.0.1:8000/upload",
+        "$baseUrl/upload",
         data: formData,
         options: Options(headers: {"Accept": "application/json"}),
       );
 
-      print("UPLOAD SUCCESS");
-      print("STATUS CODE: ${response.statusCode}");
-      print("RESPONSE DATA: ${response.data}");
-
-      return response.data["enhanced_file"];
+      return UploadResponseModel.fromJson(response.data);
     } on DioException catch (e) {
-      print("DIO ERROR");
-      print("TYPE: ${e.type}");
-      print("MESSAGE: ${e.message}");
-      print("RESPONSE: ${e.response?.data}");
-      rethrow;
-    } catch (e) {
-      print("UPLOAD ERROR");
-      print(e);
-      rethrow;
+      throw Exception(
+        e.response?.data.toString() ?? e.message ?? "Upload gagal",
+      );
+    }
+  }
+
+  /// REPROCESS
+  Future<UploadResponseModel> reprocess({
+    required String backendOriginalFile,
+    required double noiseReduction,
+    required double audioEnhancement,
+  }) async {
+    try {
+      final formData = FormData.fromMap({
+        "original_file": backendOriginalFile,
+        "noise_reduction": noiseReduction.toInt(),
+        "audio_enhancement": audioEnhancement.toInt(),
+      });
+
+      final response = await dio.post(
+        "$baseUrl/reprocess",
+        data: formData,
+        options: Options(headers: {"Accept": "application/json"}),
+      );
+
+      return UploadResponseModel.fromJson(response.data);
+    } on DioException catch (e) {
+      throw Exception(
+        e.response?.data.toString() ?? e.message ?? "Reprocess gagal",
+      );
     }
   }
 }

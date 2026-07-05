@@ -2,6 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../viewmodel/history_viewmodel.dart';
+import '../../viewmodel/upload_viewmodel.dart';
+import '../widgets/history/history_card.dart';
+import '../widgets/history/history_delete_dialog.dart';
+import '../widgets/history/history_empty.dart';
+import '../widgets/history/history_search_bar.dart';
+import 'processing_page.dart';
 
 class HistoryPage extends StatefulWidget {
   const HistoryPage({super.key});
@@ -11,6 +17,8 @@ class HistoryPage extends StatefulWidget {
 }
 
 class _HistoryPageState extends State<HistoryPage> {
+  bool isSearching = false;
+
   @override
   void initState() {
     super.initState();
@@ -25,87 +33,82 @@ class _HistoryPageState extends State<HistoryPage> {
     final vm = context.watch<HistoryViewModel>();
 
     return Scaffold(
-      appBar: AppBar(title: const Text("History")),
+      backgroundColor: const Color(0xffF6F8FC),
 
-      body: Padding(
-        padding: const EdgeInsets.all(16),
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(20),
 
-        child: Column(
-          children: [
-            TextField(
-              decoration: const InputDecoration(
-                prefixIcon: Icon(Icons.search),
+          child: Column(
+            children: [
+              HistorySearchBar(
+                isSearching: isSearching,
 
-                hintText: "Cari nama file...",
+                onToggleSearch: () {
+                  setState(() {
+                    isSearching = !isSearching;
+                  });
+
+                  if (!isSearching) {
+                    vm.searchHistory("");
+                  }
+                },
+
+                onChanged: vm.searchHistory,
               ),
 
-              onChanged: vm.searchHistory,
-            ),
+              const SizedBox(height: 20),
 
-            const SizedBox(height: 16),
+              Expanded(
+                child: vm.filteredHistories.isEmpty
+                    ? HistoryEmpty(isSearching: isSearching)
+                    : ListView.builder(
+                        itemCount: vm.filteredHistories.length,
 
-            Expanded(
-              child: vm.filteredHistories.isEmpty
-                  ? const Center(child: Text("Belum ada history"))
-                  : ListView.builder(
-                      itemCount: vm.filteredHistories.length,
+                        itemBuilder: (context, index) {
+                          final history = vm.filteredHistories[index];
 
-                      itemBuilder: (context, index) {
-                        final history = vm.filteredHistories[index];
+                          return HistoryCard(
+                            history: history,
 
-                        return Card(
-                          child: ListTile(
-                            title: Text(history.originalFile),
+                            onDownload: () {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    "Fitur download akan segera tersedia",
+                                  ),
+                                ),
+                              );
+                            },
 
-                            subtitle: Text(history.createdAt),
+                            onReprocess: () {
+                              context
+                                  .read<UploadViewModel>()
+                                  .loadHistoryProject(history);
 
-                            trailing: IconButton(
-                              icon: const Icon(Icons.delete),
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const ProcessingPage(),
+                                ),
+                              );
+                            },
 
-                              onPressed: () {
-                                showDialog(
-                                  context: context,
-
-                                  builder: (context) {
-                                    return AlertDialog(
-                                      title: const Text("Hapus History"),
-
-                                      content: const Text(
-                                        "History project ini akan dihapus.",
-                                      ),
-
-                                      actions: [
-                                        TextButton(
-                                          onPressed: () {
-                                            Navigator.pop(context);
-                                          },
-
-                                          child: const Text("Cancel"),
-                                        ),
-
-                                        ElevatedButton(
-                                          onPressed: () async {
-                                            await vm.deleteHistory(history.id!);
-
-                                            if (context.mounted) {
-                                              Navigator.pop(context);
-                                            }
-                                          },
-
-                                          child: const Text("Delete"),
-                                        ),
-                                      ],
-                                    );
-                                  },
-                                );
-                              },
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-            ),
-          ],
+                            onDelete: () {
+                              showHistoryDeleteDialog(
+                                context: context,
+                                fileName: history.originalFile,
+                                onDelete: () async {
+                                  await vm.deleteHistory(history.id!);
+                                },
+                              );
+                            },
+                          );
+                        },
+                      ),
+              ),
+            ],
+          ),
         ),
       ),
     );

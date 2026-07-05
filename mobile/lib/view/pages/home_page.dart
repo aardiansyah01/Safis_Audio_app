@@ -17,20 +17,22 @@ class HomePage extends StatelessWidget {
   static const Color textSoft = Color(0xFF6B7280);
 
   Future<void> pickFile(BuildContext context) async {
-    final vm = Provider.of<UploadViewModel>(context, listen: false);
+    final vm = context.read<UploadViewModel>();
 
-    FilePickerResult? result = await FilePicker.platform.pickFiles(
+    final result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
       allowedExtensions: ['mp3', 'wav', 'mp4'],
     );
 
-    if (result != null) {
-      final String path = result.files.single.path!;
-      final String filename = result.files.single.name;
+    if (result == null) return;
 
-      vm.setSelectedFile(filename);
-      vm.setSelectedFilePath(path);
-    }
+    final path = result.files.single.path!;
+    final filename = result.files.single.name;
+
+    vm.clearHistoryProject();
+
+    vm.setSelectedFile(filename);
+    vm.setSelectedLocalPath(path);
   }
 
   @override
@@ -53,6 +55,7 @@ class HomePage extends StatelessWidget {
               const SizedBox(height: 18),
 
               _buildContinueButton(context, vm),
+
               const SizedBox(height: 28),
 
               const Row(
@@ -79,7 +82,7 @@ class HomePage extends StatelessWidget {
 
               const SizedBox(height: 14),
 
-              _buildRecentProjectsList(vm),
+              _buildRecentProjectsList(context, vm),
             ],
           ),
         ),
@@ -88,7 +91,7 @@ class HomePage extends StatelessWidget {
   }
 
   Widget _buildContinueButton(BuildContext context, UploadViewModel vm) {
-    final bool hasFile = vm.selectedFile != "Tidak ada file dipilih";
+    final bool hasFile = vm.selectedLocalPath != null || vm.isReprocessing;
 
     return SizedBox(
       width: double.infinity,
@@ -118,7 +121,7 @@ class HomePage extends StatelessWidget {
     );
   }
 
-  Widget _buildRecentProjectsList(UploadViewModel vm) {
+  Widget _buildRecentProjectsList(BuildContext context, UploadViewModel vm) {
     if (vm.histories.isEmpty) {
       return Container(
         width: double.infinity,
@@ -171,6 +174,14 @@ class HomePage extends StatelessWidget {
             title: history.originalFile,
             subtitle: _formatDate(history.createdAt),
             status: "Done",
+            onTap: () {
+              vm.loadHistoryProject(history);
+
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const ProcessingPage()),
+              );
+            },
           ),
         );
       }).toList(),

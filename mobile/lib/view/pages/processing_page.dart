@@ -22,14 +22,15 @@ class _ProcessingPageState extends State<ProcessingPage> {
 
     Future.microtask(() {
       if (!mounted) return;
+
       context.read<UploadViewModel>().initializeProcessingPreview();
     });
   }
 
   @override
   void dispose() {
-    final vm = context.read<UploadViewModel>();
-    vm.disposeProcessingPreview(notify: false);
+    context.read<UploadViewModel>().disposeProcessingPreview(notify: false);
+
     super.dispose();
   }
 
@@ -59,13 +60,16 @@ class _ProcessingPageState extends State<ProcessingPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (vm.selectedFilePath != null)
-                vm.isSelectedFileVideo
-                    ? const ProcessingVideoPreviewCard()
-                    : ProcessingAudioPreviewCard(
-                        filePath: vm.selectedFilePath!,
-                        fileName: vm.selectedFile,
-                      ),
+              if (vm.isProcessingVideo)
+                const ProcessingVideoPreviewCard()
+              else if (vm.isProcessingAudio)
+                ProcessingAudioPreviewCard(
+                  source: vm.isReprocessing
+                      ? vm.originalFileUrl!
+                      : vm.selectedLocalPath!,
+                  fileName: vm.selectedFile,
+                  isNetwork: vm.isReprocessing,
+                ),
 
               const SizedBox(height: 18),
 
@@ -97,7 +101,7 @@ class _ProcessingPageState extends State<ProcessingPage> {
 
               ProcessingProcessButton(
                 onPressed: () async {
-                  if (vm.selectedFilePath == null) {
+                  if (vm.selectedLocalPath == null && !vm.isReprocessing) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(content: Text("File belum dipilih")),
                     );

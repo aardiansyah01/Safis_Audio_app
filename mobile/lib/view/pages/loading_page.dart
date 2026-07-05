@@ -19,7 +19,8 @@ class _LoadingPageState extends State<LoadingPage> {
     super.initState();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || _hasStarted) return;
+      if (_hasStarted || !mounted) return;
+
       _hasStarted = true;
       _startProcessing();
     });
@@ -28,7 +29,8 @@ class _LoadingPageState extends State<LoadingPage> {
   Future<void> _startProcessing() async {
     final vm = context.read<UploadViewModel>();
 
-    if (vm.selectedFilePath == null) {
+    // Upload baru wajib punya file lokal
+    if (!vm.isReprocessing && vm.selectedLocalPath == null) {
       if (!mounted) return;
 
       ScaffoldMessenger.of(
@@ -39,23 +41,28 @@ class _LoadingPageState extends State<LoadingPage> {
       return;
     }
 
-    final success = await vm.uploadFile(vm.selectedFilePath!);
+    final success = await vm.processCurrentProject();
 
     if (!mounted) return;
 
     if (success) {
-      await Future.delayed(const Duration(milliseconds: 50));
-      if (!mounted) return;
+      if (!context.mounted) return;
 
-      Navigator.pushReplacement(
+      Navigator.of(
         context,
-        MaterialPageRoute(builder: (_) => const ResultPage()),
-      );
-    } else {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(vm.status)));
+      ).pushReplacement(MaterialPageRoute(builder: (_) => const ResultPage()));
 
+      return;
+    }
+
+    // gagal
+    if (!context.mounted) return;
+
+    final messenger = ScaffoldMessenger.maybeOf(context);
+
+    messenger?.showSnackBar(SnackBar(content: Text(vm.status)));
+
+    if (Navigator.canPop(context)) {
       Navigator.pop(context);
     }
   }
@@ -65,18 +72,26 @@ class _LoadingPageState extends State<LoadingPage> {
     final vm = context.watch<UploadViewModel>();
 
     return Scaffold(
+      backgroundColor: const Color(0xFFF7F8FA),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
           child: Column(
             children: [
-              const SizedBox(height: 30),
-              const CircularProgressIndicator(),
-              const SizedBox(height: 32),
+              const SizedBox(height: 36),
 
-              const Text(
-                "Enhancing your audio...",
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              const CircularProgressIndicator(),
+
+              const SizedBox(height: 30),
+
+              Text(
+                vm.isReprocessing
+                    ? "Reprocessing your project..."
+                    : "Enhancing your audio...",
+                style: const TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
 
               const SizedBox(height: 12),
@@ -93,18 +108,21 @@ class _LoadingPageState extends State<LoadingPage> {
                 title: "Analyzing audio...",
                 isDone: vm.status != "Uploading...",
               ),
+
               const SizedBox(height: 14),
 
               _buildStepItem(
                 title: "Removing noise...",
                 isDone: vm.status != "Uploading...",
               ),
+
               const SizedBox(height: 14),
 
               _buildStepItem(
                 title: "Enhancing clarity...",
                 isDone: vm.status != "Uploading...",
               ),
+
               const SizedBox(height: 14),
 
               _buildStepItem(
@@ -132,7 +150,9 @@ class _LoadingPageState extends State<LoadingPage> {
             isDone ? Icons.check_circle : Icons.radio_button_checked,
             color: isDone ? Colors.green : Colors.blue,
           ),
+
           const SizedBox(width: 12),
+
           Expanded(
             child: Text(
               title,

@@ -5,13 +5,15 @@ import 'package:flutter/material.dart';
 import 'dart:math' as math;
 
 class ProcessingAudioPreviewCard extends StatefulWidget {
-  final String filePath;
+  final String source;
+  final bool isNetwork;
   final String fileName;
 
   const ProcessingAudioPreviewCard({
     super.key,
-    required this.filePath,
+    required this.source,
     required this.fileName,
+    this.isNetwork = false,
   });
 
   @override
@@ -32,6 +34,8 @@ class _ProcessingAudioPreviewCardState
     super.initState();
 
     _player = AudioPlayer();
+
+    _loadAudio();
 
     _player.onDurationChanged.listen((duration) {
       if (mounted) {
@@ -65,16 +69,34 @@ class _ProcessingAudioPreviewCardState
     super.dispose();
   }
 
+  Future<void> _loadAudio() async {
+    if (widget.isNetwork) {
+      await _player.setSource(UrlSource(widget.source));
+    } else {
+      await _player.setSource(DeviceFileSource(widget.source));
+    }
+
+    final duration = await _player.getDuration();
+
+    if (mounted && duration != null) {
+      setState(() {
+        _duration = duration;
+      });
+    }
+  }
+
   Future<void> _togglePlayPause() async {
     if (_isPlaying) {
       await _player.pause();
+
       if (mounted) {
         setState(() {
           _isPlaying = false;
         });
       }
     } else {
-      await _player.play(DeviceFileSource(widget.filePath));
+      await _player.resume();
+
       if (mounted) {
         setState(() {
           _isPlaying = true;

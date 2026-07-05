@@ -22,15 +22,15 @@ class _ResultPageState extends State<ResultPage> {
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
+
       context.read<UploadViewModel>().initializeResultPreview();
     });
   }
 
   @override
   void dispose() {
-    // jangan pakai context.watch di dispose
-    final vm = context.read<UploadViewModel>();
-    vm.disposeResultPreview(notify: false);
+    context.read<UploadViewModel>().disposeResultPreview(notify: false);
+
     super.dispose();
   }
 
@@ -45,9 +45,9 @@ class _ResultPageState extends State<ResultPage> {
         backgroundColor: const Color(0xFFF7F8FA),
         elevation: 0,
         scrolledUnderElevation: 0,
-        title: const Text(
-          "Processing Complete",
-          style: TextStyle(
+        title: Text(
+          vm.isReprocessing ? "Project Updated" : "Processing Complete",
+          style: const TextStyle(
             color: Color(0xFF111827),
             fontSize: 22,
             fontWeight: FontWeight.w700,
@@ -61,6 +61,7 @@ class _ResultPageState extends State<ResultPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const ResultSuccessBanner(),
+
               const SizedBox(height: 18),
 
               if (vm.enhancedFile != null) ...[
@@ -102,10 +103,10 @@ class _ResultPageState extends State<ResultPage> {
               Row(
                 children: [
                   Expanded(
-                    child: const ResultInfoCard(
+                    child: ResultInfoCard(
                       icon: Icons.check_circle_outline_rounded,
-                      iconColor: Color(0xFF10B981),
-                      value: "Success",
+                      iconColor: const Color(0xFF10B981),
+                      value: vm.isReprocessing ? "Updated" : "Success",
                       label: "Status",
                     ),
                   ),
@@ -115,7 +116,7 @@ class _ResultPageState extends State<ResultPage> {
                       icon: Icons.insert_drive_file_rounded,
                       iconColor: const Color(0xFFF59E0B),
                       value: vm.enhancedFile ?? "-",
-                      label: "File Name",
+                      label: "Output File",
                     ),
                   ),
                 ],
@@ -129,11 +130,11 @@ class _ResultPageState extends State<ResultPage> {
                     : () async {
                         await vm.downloadEnhancedFile();
 
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(
-                            context,
-                          ).showSnackBar(SnackBar(content: Text(vm.status)));
-                        }
+                        if (!context.mounted) return;
+
+                        ScaffoldMessenger.of(
+                          context,
+                        ).showSnackBar(SnackBar(content: Text(vm.status)));
                       },
                 icon: Icons.download_rounded,
                 label: vm.isEnhancedFileVideo
@@ -149,10 +150,11 @@ class _ResultPageState extends State<ResultPage> {
                   await vm.resetProcessingState();
 
                   if (!context.mounted) return;
+
                   Navigator.popUntil(context, (route) => route.isFirst);
                 },
                 icon: Icons.refresh_rounded,
-                label: "Process Again",
+                label: "Back to Home",
                 isPrimary: false,
               ),
             ],

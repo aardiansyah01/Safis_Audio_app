@@ -7,6 +7,7 @@ import '../repository/audio_player_repository.dart';
 import '../repository/history_repository.dart';
 import '../repository/video_player_repository.dart';
 import '../model/history_model.dart';
+import '../model/upload_response_model.dart';
 
 class UploadViewModel extends ChangeNotifier {
   UploadViewModel() {
@@ -21,7 +22,8 @@ class UploadViewModel extends ChangeNotifier {
 
   String status = "Belum upload";
   String selectedFile = "Tidak ada file dipilih";
-  String? selectedFilePath;
+  String? selectedLocalPath;
+  String? selectedBackendFile;
 
   String? enhancedFile;
 
@@ -47,13 +49,17 @@ class UploadViewModel extends ChangeNotifier {
 
   List<HistoryModel> histories = [];
 
+  HistoryModel? currentHistoryProject;
+
+  bool get isReprocessing => currentHistoryProject != null;
+
   void setSelectedFile(String filename) {
     selectedFile = filename;
     notifyListeners();
   }
 
-  void setSelectedFilePath(String path) {
-    selectedFilePath = path;
+  void setSelectedLocalPath(String path) {
+    selectedLocalPath = path;
     notifyListeners();
   }
 
@@ -69,15 +75,45 @@ class UploadViewModel extends ChangeNotifier {
 
   // FILE TYPE CEK
   bool get isSelectedFileVideo {
-    final path = selectedFilePath?.toLowerCase();
+    final path = selectedLocalPath?.toLowerCase();
+
     if (path == null) return false;
-    return path.endsWith('.mp4');
+
+    return path.endsWith(".mp4");
+  }
+
+  bool get isProcessingVideo {
+    if (selectedLocalPath != null) {
+      return selectedLocalPath!.toLowerCase().endsWith(".mp4");
+    }
+
+    if (selectedBackendFile != null) {
+      return selectedBackendFile!.toLowerCase().endsWith(".mp4");
+    }
+
+    return false;
   }
 
   bool get isSelectedFileAudio {
-    final path = selectedFilePath?.toLowerCase();
+    final path = selectedLocalPath?.toLowerCase();
+
     if (path == null) return false;
-    return path.endsWith('.mp3') || path.endsWith('.wav');
+
+    return path.endsWith(".mp3") || path.endsWith(".wav");
+  }
+
+  bool get isProcessingAudio {
+    if (selectedLocalPath != null) {
+      final path = selectedLocalPath!.toLowerCase();
+      return path.endsWith(".mp3") || path.endsWith(".wav");
+    }
+
+    if (selectedBackendFile != null) {
+      final path = selectedBackendFile!.toLowerCase();
+      return path.endsWith(".mp3") || path.endsWith(".wav");
+    }
+
+    return false;
   }
 
   bool get isEnhancedFileVideo {
@@ -97,12 +133,25 @@ class UploadViewModel extends ChangeNotifier {
     return "http://127.0.0.1:8000/download/$enhancedFile";
   }
 
+  String? get originalFileUrl {
+    if (selectedBackendFile == null) return null;
+
+    return "http://127.0.0.1:8000/uploads/$selectedBackendFile";
+  }
+
   // PROCESSING PREVIEW LOGIk
   Future<void> initializeProcessingPreview() async {
-    if (selectedFilePath == null) return;
     if (hasProcessingPreviewInitialized) return;
 
-    if (!isSelectedFileVideo) {
+    bool isVideo = false;
+
+    if (selectedLocalPath != null) {
+      isVideo = selectedLocalPath!.toLowerCase().endsWith(".mp4");
+    } else if (selectedBackendFile != null) {
+      isVideo = selectedBackendFile!.toLowerCase().endsWith(".mp4");
+    }
+
+    if (!isVideo) {
       hasProcessingPreviewInitialized = true;
       notifyListeners();
       return;
@@ -112,13 +161,27 @@ class UploadViewModel extends ChangeNotifier {
       isProcessingPreviewLoading = true;
       notifyListeners();
 
-      processingVideoController = await videoRepository.createController(
-        selectedFilePath!,
-      );
+      if (selectedLocalPath != null) {
+        processingVideoController = await videoRepository.createController(
+          selectedLocalPath!,
+        );
+      } else if (originalFileUrl != null) {
+        processingVideoController = await videoRepository
+            .createNetworkController(originalFileUrl!);
+      }
+
+      if (processingVideoController != null) {
+        processingVideoController!.addListener(() {
+          notifyListeners();
+        });
+
+        await processingVideoController!.setLooping(true);
+        await processingVideoController!.setVolume(1.0);
+      }
 
       hasProcessingPreviewInitialized = true;
     } catch (e) {
-      debugPrint("Video preview init error: $e");
+      debugPrint("Video preview init error : $e");
     } finally {
       isProcessingPreviewLoading = false;
       notifyListeners();
@@ -211,55 +274,34 @@ class UploadViewModel extends ChangeNotifier {
   // RESET STATE
   Future<void> resetProcessingState() async {
     await stopAudio();
+
     await disposeProcessingPreview(notify: false);
+
     await disposeResultPreview(notify: false);
 
+    selectedFile = "Tidak ada file dipilih";
+
+    selectedLocalPath = null;
+
+    selectedBackendFile = null;
+
+    currentHistoryProject = null;
+
     enhancedFile = null;
+
     isLoading = false;
+
     isPlaying = false;
+
     isUploadSuccess = false;
+
     status = "Belum upload";
 
+    noiseReduction = 50;
+
+    audioEnhancement = 50;
+
     notifyListeners();
-  }
-
-  // UPLOAD / PROCESS
-  Future<bool> uploadFile(String path) async {
-    try {
-      isLoading = true;
-      isUploadSuccess = false;
-      status = "Uploading...";
-      notifyListeners();
-
-      final String result = await repository.upload(
-        path,
-        noiseReduction,
-        audioEnhancement,
-      );
-
-      enhancedFile = result;
-
-      await historyRepository.insertHistory(
-        HistoryModel(
-          originalFile: selectedFile,
-          enhancedFile: result,
-          createdAt: DateTime.now().toString(),
-        ),
-      );
-
-      await loadHistory();
-
-      status = "Upload berhasil: $result";
-      isUploadSuccess = true;
-      return true;
-    } catch (e) {
-      status = "Error upload: $e";
-      isUploadSuccess = false;
-      return false;
-    } finally {
-      isLoading = false;
-      notifyListeners();
-    }
   }
 
   // DOWNLOAD
@@ -306,5 +348,127 @@ class UploadViewModel extends ChangeNotifier {
   Future<void> loadHistory() async {
     histories = await historyRepository.getHistory();
     notifyListeners();
+  }
+
+  void loadHistoryProject(HistoryModel history) {
+    currentHistoryProject = history;
+
+    selectedFile = history.originalFile;
+
+    selectedLocalPath = null;
+
+    selectedBackendFile = history.originalPath;
+
+    enhancedFile = history.enhancedFile;
+
+    noiseReduction = history.noiseReduction;
+
+    audioEnhancement = history.audioEnhancement;
+
+    status = "Belum upload";
+
+    notifyListeners();
+  }
+
+  void clearHistoryProject() {
+    currentHistoryProject = null;
+    selectedBackendFile = null;
+    notifyListeners();
+  }
+
+  Future<bool> processCurrentProject() async {
+    try {
+      isLoading = true;
+      isUploadSuccess = false;
+      status = "Uploading...";
+      notifyListeners();
+
+      if (!isReprocessing && selectedLocalPath == null) {
+        status = "File belum dipilih";
+        notifyListeners();
+        return false;
+      }
+
+      if (isReprocessing && selectedBackendFile == null) {
+        status = "Project tidak ditemukan";
+        notifyListeners();
+        return false;
+      }
+
+      UploadResponseModel result;
+
+      debugPrint("========== REPROCESS ==========");
+      debugPrint("selectedBackendFile : $selectedBackendFile");
+      debugPrint("selectedLocalPath   : $selectedLocalPath");
+      debugPrint(
+        "currentHistory      : ${currentHistoryProject?.originalPath}",
+      );
+      debugPrint("===============================");
+
+      if (isReprocessing) {
+        result = await repository.reprocess(
+          backendOriginalFile: selectedBackendFile!,
+          noiseReduction: noiseReduction,
+          audioEnhancement: audioEnhancement,
+        );
+      } else {
+        result = await repository.upload(
+          selectedLocalPath!,
+          noiseReduction,
+          audioEnhancement,
+        );
+      }
+
+      enhancedFile = result.enhancedFile;
+
+      if (!isReprocessing) {
+        await historyRepository.insertHistory(
+          HistoryModel(
+            originalFile: result.originalName,
+            originalPath: result.storedOriginalFile,
+            enhancedFile: result.enhancedFile,
+            noiseReduction: result.noiseReduction,
+            audioEnhancement: result.audioEnhancement,
+            createdAt: DateTime.now().toIso8601String(),
+          ),
+        );
+      } else {
+        await historyRepository.updateHistory(
+          HistoryModel(
+            id: currentHistoryProject!.id,
+            originalFile: currentHistoryProject!.originalFile,
+            originalPath: currentHistoryProject!.originalPath,
+            enhancedFile: result.enhancedFile,
+            noiseReduction: noiseReduction,
+            audioEnhancement: audioEnhancement,
+            createdAt: currentHistoryProject!.createdAt,
+          ),
+        );
+
+        currentHistoryProject = HistoryModel(
+          id: currentHistoryProject!.id,
+          originalFile: currentHistoryProject!.originalFile,
+          originalPath: currentHistoryProject!.originalPath,
+          enhancedFile: result.enhancedFile,
+          noiseReduction: noiseReduction,
+          audioEnhancement: audioEnhancement,
+          createdAt: currentHistoryProject!.createdAt,
+        );
+      }
+
+      await loadHistory();
+
+      status = "Success";
+      isUploadSuccess = true;
+
+      return true;
+    } catch (e) {
+      status = e.toString();
+      isUploadSuccess = false;
+      return false;
+    } finally {
+      isLoading = false;
+      notifyListeners();
+    }
   }
 }
