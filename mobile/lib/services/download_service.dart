@@ -1,16 +1,38 @@
 import 'dart:io';
 
 import 'package:dio/dio.dart';
+import 'package:flutter_file_dialog/flutter_file_dialog.dart';
+import 'package:path_provider/path_provider.dart';
 
 class DownloadService {
-  final Dio dio = Dio();
+  final Dio _dio = Dio();
 
-  Future<void> downloadFile(String filename) async {
-    String savePath = "${Directory.current.path}/$filename";
+  static const String baseUrl = "http://10.0.2.2:8000";
 
-    await dio.download("http://127.0.0.1:8000/download/$filename", savePath);
+  Future<bool> downloadFile(String filename) async {
+    try {
+      final Directory tempDir = await getTemporaryDirectory();
 
-    print("FILE SAVED:");
-    print(savePath);
+      final String tempPath = "${tempDir.path}/$filename";
+
+      await _dio.download("$baseUrl/download/$filename", tempPath);
+
+      final params = SaveFileDialogParams(sourceFilePath: tempPath);
+
+      final savedPath = await FlutterFileDialog.saveFile(params: params);
+
+      final file = File(tempPath);
+
+      if (await file.exists()) {
+        await file.delete();
+      }
+
+      return savedPath != null;
+    } catch (e) {
+      print("DOWNLOAD ERROR:");
+      print(e);
+
+      return false;
+    }
   }
 }

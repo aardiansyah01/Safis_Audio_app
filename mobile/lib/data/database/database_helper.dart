@@ -14,8 +14,6 @@ class DatabaseHelper {
   static Future<Database> _initDB() async {
     String path = join(await getDatabasesPath(), 'audio_enhancer.db');
 
-    await deleteDatabase(path);
-
     return await openDatabase(
       path,
       version: 2,

@@ -1,29 +1,30 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'view/pages/main_navigation_page.dart';
-import 'view/pages/home_page.dart';
-
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
-import 'viewmodel/upload_viewmodel.dart';
-import 'package:provider/provider.dart';
+import 'view/pages/main_navigation_page.dart';
 
 import 'viewmodel/upload_viewmodel.dart';
 import 'viewmodel/history_viewmodel.dart';
+import 'viewmodel/auth_viewmodel.dart';
 
-void main() {
-  sqfliteFfiInit();
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
 
-  databaseFactory = databaseFactoryFfi;
+  if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+    sqfliteFfiInit();
+    databaseFactory = databaseFactoryFfi;
+  }
 
   runApp(
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => UploadViewModel()),
-
         ChangeNotifierProvider(create: (_) => HistoryViewModel()),
+        ChangeNotifierProvider(create: (_) => AuthViewModel()..loadSession()),
       ],
-
       child: const MyApp(),
     ),
   );
@@ -36,7 +37,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      home: MainNavigationPage(),
+      home: const MainNavigationPage(),
     );
   }
 }

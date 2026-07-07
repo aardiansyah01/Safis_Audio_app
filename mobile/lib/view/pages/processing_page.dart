@@ -76,6 +76,13 @@ class _ProcessingPageState extends State<ProcessingPage> {
               ProcessingSliderCard(
                 icon: Icons.graphic_eq_rounded,
                 title: "Noise Reduction",
+                infoTitle: "Noise Reduction",
+                infoDescription:
+                    "Mengurangi suara bising yang tidak diinginkan pada rekaman, seperti suara kipas, angin, kendaraan, atau dengungan latar.\n\n"
+                    "Tips penggunaan:\n\n"
+                    "• Nilai rendah 50% → Mengurangi noise ringan dengan tetap mempertahankan kualitas suara asli.\n\n"
+                    "• Nilai sedang 70% → Cocok untuk sebagian besar rekaman.\n\n"
+                    "• Nilai tinggi 90% → Menghilangkan lebih banyak noise, namun suara utama dapat terdengar kurang natural apabila digunakan secara berlebihan.",
                 value: vm.noiseReduction,
                 valueColor: const Color(0xFF2563EB),
                 activeColor: const Color(0xFF2563EB),
@@ -89,6 +96,13 @@ class _ProcessingPageState extends State<ProcessingPage> {
               ProcessingSliderCard(
                 icon: Icons.auto_fix_high_rounded,
                 title: "Audio Enhancement",
+                infoTitle: "Audio Enhancement",
+                infoDescription:
+                    "Meningkatkan kejernihan dan kualitas suara utama sehingga suara terdengar lebih jelas dan mudah dipahami.\n\n"
+                    "Tips penggunaan:\n\n"
+                    "• Nilai rendah 50% → Peningkatan suara yang halus.\n\n"
+                    "• Nilai sedang 70% → Direkomendasikan untuk sebagian besar rekaman.\n\n"
+                    "• Nilai tinggi 90% → Suara menjadi lebih menonjol, namun penggunaan berlebihan dapat menyebabkan distorsi atau terdengar kurang natural.",
                 value: vm.audioEnhancement,
                 valueColor: const Color(0xFF7C3AED),
                 activeColor: const Color(0xFF8B5CF6),

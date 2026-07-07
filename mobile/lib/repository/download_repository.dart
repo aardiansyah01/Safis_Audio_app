@@ -3,7 +3,7 @@ import '../services/download_service.dart';
 class DownloadRepository {
   final DownloadService service = DownloadService();
 
-  Future<void> download(String filename) async {
-    await service.downloadFile(filename);
+  Future<bool> download(String filename) async {
+    return await service.downloadFile(filename);
   }
 }

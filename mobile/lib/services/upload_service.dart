@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 
 import '../model/upload_response_model.dart';
+import '../config/api_config.dart';
 
 class UploadService {
   final Dio dio = Dio(
@@ -11,7 +12,7 @@ class UploadService {
     ),
   );
 
-  static const String baseUrl = "http://127.0.0.1:8000";
+  final String baseUrl = ApiConfig.baseUrl;
 
   Future<UploadResponseModel> uploadFile(
     String filePath,

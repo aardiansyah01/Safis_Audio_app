@@ -8,6 +8,7 @@ import '../repository/history_repository.dart';
 import '../repository/video_player_repository.dart';
 import '../model/history_model.dart';
 import '../model/upload_response_model.dart';
+import '../config/api_config.dart';
 
 class UploadViewModel extends ChangeNotifier {
   UploadViewModel() {
@@ -130,13 +131,13 @@ class UploadViewModel extends ChangeNotifier {
 
   String? get enhancedFileUrl {
     if (enhancedFile == null) return null;
-    return "http://127.0.0.1:8000/download/$enhancedFile";
+    return "${ApiConfig.baseUrl}/download/$enhancedFile";
   }
 
   String? get originalFileUrl {
     if (selectedBackendFile == null) return null;
 
-    return "http://127.0.0.1:8000/uploads/$selectedBackendFile";
+    return "${ApiConfig.baseUrl}/uploads/$selectedBackendFile";
   }
 
   // PROCESSING PREVIEW LOGIk
@@ -308,15 +309,19 @@ class UploadViewModel extends ChangeNotifier {
   Future<void> downloadEnhancedFile() async {
     if (enhancedFile == null) return;
 
+    status = "Downloading...";
+    notifyListeners();
+
     try {
-      status = "Downloading...";
-      notifyListeners();
+      final success = await downloadRepository.download(enhancedFile!);
 
-      await downloadRepository.download(enhancedFile!);
-
-      status = "Download selesai";
+      if (success) {
+        status = "File berhasil disimpan";
+      } else {
+        status = "Download dibatalkan";
+      }
     } catch (e) {
-      status = "Download gagal: $e";
+      status = "Download gagal";
     }
 
     notifyListeners();
@@ -327,9 +332,7 @@ class UploadViewModel extends ChangeNotifier {
     if (enhancedFile == null) return;
 
     try {
-      await audioRepository.play(
-        "http://127.0.0.1:8000/download/$enhancedFile",
-      );
+      await audioRepository.play("${ApiConfig.baseUrl}/download/$enhancedFile");
 
       isPlaying = true;
       notifyListeners();

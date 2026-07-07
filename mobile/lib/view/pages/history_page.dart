@@ -8,6 +8,7 @@ import '../widgets/history/history_delete_dialog.dart';
 import '../widgets/history/history_empty.dart';
 import '../widgets/history/history_search_bar.dart';
 import 'processing_page.dart';
+import '../../repository/download_repository.dart';
 
 class HistoryPage extends StatefulWidget {
   const HistoryPage({super.key});
@@ -71,11 +72,18 @@ class _HistoryPageState extends State<HistoryPage> {
                           return HistoryCard(
                             history: history,
 
-                            onDownload: () {
+                            onDownload: () async {
+                              final success = await DownloadRepository()
+                                  .download(history.enhancedFile);
+
+                              if (!context.mounted) return;
+
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
+                                SnackBar(
                                   content: Text(
-                                    "Fitur download akan segera tersedia",
+                                    success
+                                        ? "File berhasil disimpan"
+                                        : "Download dibatalkan",
                                   ),
                                 ),
                               );

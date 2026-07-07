@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'info_button.dart';
 
 class ProcessingSliderCard extends StatelessWidget {
   final IconData icon;
@@ -9,6 +10,8 @@ class ProcessingSliderCard extends StatelessWidget {
   final String leftLabel;
   final String rightLabel;
   final ValueChanged<double> onChanged;
+  final String? infoTitle;
+  final String? infoDescription;
 
   const ProcessingSliderCard({
     super.key,
@@ -20,6 +23,8 @@ class ProcessingSliderCard extends StatelessWidget {
     required this.leftLabel,
     required this.rightLabel,
     required this.onChanged,
+    this.infoTitle,
+    this.infoDescription,
   });
 
   @override
@@ -56,13 +61,25 @@ class ProcessingSliderCard extends StatelessWidget {
               const SizedBox(width: 10),
 
               Expanded(
-                child: Text(
-                  title,
-                  style: const TextStyle(
-                    color: Color(0xFF111827),
-                    fontSize: 17,
-                    fontWeight: FontWeight.w700,
-                  ),
+                child: Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        title,
+                        style: const TextStyle(
+                          color: Color(0xFF111827),
+                          fontSize: 17,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+
+                    if (infoTitle != null && infoDescription != null)
+                      InfoButton(
+                        title: infoTitle!,
+                        description: infoDescription!,
+                      ),
+                  ],
                 ),
               ),
 

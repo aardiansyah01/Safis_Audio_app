@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'history_page.dart';
 import 'home_page.dart';
+import 'profile_page.dart';
 
 class MainNavigationPage extends StatefulWidget {
   const MainNavigationPage({super.key});
@@ -16,17 +17,7 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
   final List<Widget> pages = [
     const HomePage(),
     const HistoryPage(),
-
-    // sementara sebelum Profile dibuat
-    const Scaffold(
-      backgroundColor: Color(0xFFF7F8FA),
-      body: Center(
-        child: Text(
-          "Profile Coming Soon",
-          style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
-        ),
-      ),
-    ),
+    const ProfilePage(),
   ];
 
   @override
@@ -34,9 +25,6 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
     return Scaffold(
       backgroundColor: const Color(0xFFF7F8FA),
 
-      // ==========================
-      // LOGIKA LAMA TIDAK DIUBAH
-      // ==========================
       body: pages[currentIndex],
 
       bottomNavigationBar: SafeArea(
