@@ -1,3 +1,3 @@
-[submodule "Safis_Audio_Backend"]
-	path = Safis_Audio_Backend
-	url = https://github.com/aardiansyah01/Safis_Audio_Backend.git
+[submodule "backend"]
+    path = backend
+    url = https://github.com/aardiansyah01/Safis_Audio_Backend.git
